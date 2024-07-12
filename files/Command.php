@@ -4,7 +4,7 @@ require_once "ConsoleOutput.php";
 
 class Command
 {
-    const VERSION = "0.1.0";
+    const VERSION = "0.1.1";
     const OS_UNKNOWN = "Unknown";
     const OS_WIN = "Windows";
     const OS_LINUX = "Linux";
@@ -16,13 +16,38 @@ class Command
     {
         $this->PhpInfo();
 
-        if ($command == "install") $this->install($extension);
-        if ($command == "status") $this->status($extension);
-        if ($command == "info") $this->info($extension);
-        if ($command == "version") $this->version($extension);
         if ($command == "list") $this->list();
         if ($command == "about") $this->about();
+
+        if ($command == "install") {
+            $this->extensionNameExistsInInput($command, $extension);
+            $this->install($extension);
+        }
+
+        if ($command == "status") {
+            $this->extensionNameExistsInInput($command, $extension);
+            $this->status($extension);
+        }
+
+        if ($command == "info") {
+            $this->extensionNameExistsInInput($command, $extension);
+            $this->info($extension);
+        }
+        
+        if ($command == "version") {
+            $this->extensionNameExistsInInput($command, $extension);
+            $this->version($extension);
+        }
+
         //if ($command == "self-update") $this->selfUpdate();
+    }
+
+    private function extensionNameExistsInInput(string $command, ?string $extension): void
+    {
+        if (is_null($extension)) {
+            ConsoleOutput::error("You must enter the name of the extension for this command")->print()->break();
+            ConsoleOutput::line("Example: php pecl.phar " . $command . " <extension_name>")->print()->break()->exit();
+        }
     }
 
     private function install(string $extension): void
@@ -68,7 +93,7 @@ class Command
 
     private function list(): void
     {
-        ConsoleOutput::success("\nPECL Commands")->print()->break(true);
+        ConsoleOutput::info("PECL Commands")->print()->break(true);
         ConsoleOutput::formattedRowData([
             "install" => "Installs the package",
             "status" => "Shows if extension is enabled",
@@ -83,9 +108,9 @@ class Command
         try {
             $extension = new ReflectionExtension($extension_name);
 
-            ConsoleOutput::success("\nExtension: ")->print();
-            ConsoleOutput::line($extension->getName())->print();
-            ConsoleOutput::success("\nVersion: ")->print();
+            ConsoleOutput::success("Extension: ")->print();
+            ConsoleOutput::line($extension->getName())->print()->break();
+            ConsoleOutput::success("Version: ")->print();
             ConsoleOutput::line($extension->getVersion())->print();
         } catch (ReflectionException $e) {
             ConsoleOutput::error($e->getMessage())->print()->break();
@@ -99,7 +124,7 @@ class Command
 
     private function about(): void
     {
-        ConsoleOutput::info("\nPHP PECL Component")->print()->break(true);
+        ConsoleOutput::info("PHP PECL Component")->print()->break(true);
 
         ConsoleOutput::formattedRowData([
             "Version" => self::VERSION,
