@@ -1,5 +1,7 @@
 # PHP PECL Component
 
+<img src="https://pecl.php.net/img/peclsmall.gif">
+
 PECL is a repository for PHP Extensions, providing a directory of all known extensions and hosting facilities for downloading and development of PHP extensions.
 
 This component is an alternative to the original PECL located on the website [https://pecl.php.net/](https://pecl.php.net/).
