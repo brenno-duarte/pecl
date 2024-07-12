@@ -18,11 +18,12 @@ The PECL component is supported from PHP version 8.3 and 64-bit Windows.
 
 Simply download the `pecl.phar` file. You can use one of the following commands:
 
-`install` - Installs the package,
-`status` - Shows if extension is enabled,
-`info` - Shows the extension description,
-`list` - Shows all available commands,
-`version` - Shows extension version
+- `install` - Installs the package
+- `status` - Shows if extension is enabled,
+- `info` - Shows the extension description,
+- `list` - Shows all available commands,
+- `version` - Shows extension version
+- `self-update` - Update PECL component
 
 Example
 
