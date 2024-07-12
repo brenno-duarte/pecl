@@ -51,6 +51,11 @@ class ConsoleOutput
         return $this;
     }
 
+    public function getMessage(): string
+    {
+        return self::$message;
+    }
+
     public function exit(): never
     {
         exit;

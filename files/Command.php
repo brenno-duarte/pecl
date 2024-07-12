@@ -4,7 +4,7 @@ require_once "ConsoleOutput.php";
 
 class Command
 {
-    const VERSION = "0.1.1";
+    const VERSION = "0.2.0";
     const OS_UNKNOWN = "Unknown";
     const OS_WIN = "Windows";
     const OS_LINUX = "Linux";
@@ -18,6 +18,7 @@ class Command
 
         if ($command == "list") $this->list();
         if ($command == "about") $this->about();
+        if ($command == "self-update") $this->selfUpdate();
 
         if ($command == "install") {
             $this->extensionNameExistsInInput($command, $extension);
@@ -33,13 +34,11 @@ class Command
             $this->extensionNameExistsInInput($command, $extension);
             $this->info($extension);
         }
-        
+
         if ($command == "version") {
             $this->extensionNameExistsInInput($command, $extension);
             $this->version($extension);
         }
-
-        //if ($command == "self-update") $this->selfUpdate();
     }
 
     private function extensionNameExistsInInput(string $command, ?string $extension): void
@@ -119,16 +118,63 @@ class Command
 
     private function selfUpdate(): void
     {
-        //$url = "https://github.com/brenno-duarte/php-pecl-extensions/releases/download/3.4.0alpha1/php_xdebug-3.4.0alpha1-8.3-vs16-x86_64.dll"
+        $url = "https://api.github.com/repos/brenno-duarte/pecl/releases";
+        $json = file_get_contents($url, false);
+        $tags = json_decode($json);
+        $latest_tag = $tags[0]->tag_name;
+
+        if (version_compare($latest_tag, self::VERSION, ">")) {
+            ConsoleOutput::success("PECL component is updating...")->print()->break();
+
+            $latest_pecl = "https://github.com/brenno-duarte/pecl/releases/download/" . $latest_tag . "/pecl.phar";
+            $pecl_temp = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "pecl-updated.phar";
+            $file = fopen($latest_pecl, "r");
+            $result = file_put_contents($pecl_temp, $file);
+
+            if ($result == false) ConsoleOutput::error("Failed to update PECL component")->print()->exit();
+            echo $this->generateAutoUpdateFile();
+        } else {
+            ConsoleOutput::success("PECL component is updated!")->print()->break();
+        }
+    }
+
+    private function generateAutoUpdateFile(): mixed
+    {
+        $data = '#!/usr/bin/env php
+<?php
+
+$current_pecl_file = str_replace("phar://", "", \'' . __DIR__ . '\');
+$user_dir = dirname($current_pecl_file) . DIRECTORY_SEPARATOR;
+
+$is_moved = rename(
+    sys_get_temp_dir() . DIRECTORY_SEPARATOR . "pecl-updated.phar", 
+    $user_dir . "pecl-updated.phar"
+);
+
+if ($is_moved == true && file_exists($user_dir . "pecl-updated.phar")) {
+    clearstatcache();
+
+    if (copy($user_dir . "pecl-updated.phar", $user_dir . "pecl.phar")) {
+        unlink($user_dir . "pecl-updated.phar");
+        echo "\033[92mPECL component updated with successfully!\e[0m \n";
+        echo "Execute `php pecl.phar about` to see current version";
+    } 
+} else {
+    echo "\033[41mError to update PECL component!\e[0m";
+}';
+
+        $pecl_autoupdate_file = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "pecl-autoupdate-" . date("Y-m-d") . ".php";
+        $result = file_put_contents($pecl_autoupdate_file, $data);
+        if ($result != false) return shell_exec("php " . $pecl_autoupdate_file);
+        return ConsoleOutput::error("Error to update PECL component!")->getMessage();
     }
 
     private function about(): void
     {
-        ConsoleOutput::info("PHP PECL Component")->print()->break(true);
-
+        ConsoleOutput::info("PECL Component")->print()->break();
         ConsoleOutput::formattedRowData([
             "Version" => self::VERSION,
-            "Repository" => "https://github.com/brenno-duarte/php-pecl/"
+            "Repository" => "https://github.com/brenno-duarte/pecl/"
         ], 15, true);
     }
 
