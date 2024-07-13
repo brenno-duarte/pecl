@@ -4,17 +4,25 @@ require_once "ConsoleOutput.php";
 
 class Command
 {
-    const VERSION = "0.2.0";
+    const VERSION = "0.2.1";
     const OS_UNKNOWN = "Unknown";
     const OS_WIN = "Windows";
     const OS_LINUX = "Linux";
     const OS_OSX = "MacOS";
 
     private array $php_info = [];
+    private readonly string $repo_url;
+    private readonly string $repo_api_url;
+    private readonly string $repo_raw_url;
 
     public function __construct(string $command, ?string $extension)
     {
         $this->PhpInfo();
+
+        $repository = "brenno-duarte/pecl";
+        $this->repo_url = "https://github.com/" . $repository . "/";
+        $this->repo_api_url = "https://api.github.com/repos/" . $repository . "/";
+        $this->repo_raw_url = "https://raw.githubusercontent.com/" . $repository . "/";
 
         if ($command == "list") $this->list();
         if ($command == "about") $this->about();
@@ -55,9 +63,8 @@ class Command
             ConsoleOutput::success($extension . ": extension already installed")->print()->exit();
         }
 
-        $url = "https://raw.githubusercontent.com/brenno-duarte/php-pecl/main/extensions/" .
-            $extension . "/" . $extension . "-" . $this->php_info['php_version'] . "-x64-" .
-            $this->php_info['thread_safe'] . "/php_" . $extension . ".dll";
+        $url = $this->repo_raw_url . "main/extensions/" .  $extension . "/" . $this->php_info['php_version'] .
+            "-" . $this->php_info['thread_safe'] . "-" . $extension . ".dll";
 
         $extension_dir_file = $this->php_info["extensions_dir"] . "php_" . $extension . ".dll";
         $extension_dir_temp = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "php_" . $extension . ".dll";
@@ -118,7 +125,7 @@ class Command
 
     private function selfUpdate(): void
     {
-        $url = "https://api.github.com/repos/brenno-duarte/pecl/releases";
+        $url = $this->repo_api_url . "releases";
         $json = file_get_contents($url, false);
         $tags = json_decode($json);
         $latest_tag = $tags[0]->tag_name;
@@ -126,7 +133,7 @@ class Command
         if (version_compare($latest_tag, self::VERSION, ">")) {
             ConsoleOutput::success("PECL component is updating...")->print()->break();
 
-            $latest_pecl = "https://github.com/brenno-duarte/pecl/releases/download/" . $latest_tag . "/pecl.phar";
+            $latest_pecl = $this->repo_url . "releases/download/" . $latest_tag . "/pecl.phar";
             $pecl_temp = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "pecl-updated.phar";
             $file = fopen($latest_pecl, "r");
             $result = file_put_contents($pecl_temp, $file);
@@ -174,7 +181,7 @@ if ($is_moved == true && file_exists($user_dir . "pecl-updated.phar")) {
         ConsoleOutput::info("PECL Component")->print()->break();
         ConsoleOutput::formattedRowData([
             "Version" => self::VERSION,
-            "Repository" => "https://github.com/brenno-duarte/pecl/"
+            "Repository" => $this->repo_url
         ], 15, true);
     }
 
@@ -224,7 +231,7 @@ if ($is_moved == true && file_exists($user_dir . "pecl-updated.phar")) {
 
     private function configIniComponent(string $name): void
     {
-        $url = "https://github.com/brenno-duarte/pecl/tree/main/extensions-required-files/";
+        $url = $this->repo_url . "tree/main/extensions-required-files/";
 
         switch ($name) {
             case "apcu":
