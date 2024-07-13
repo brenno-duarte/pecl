@@ -1,5 +1,7 @@
 <?php
 
+require_once "files/ConsoleOutput.php";
+
 class BuildPhar
 {
     /**
@@ -58,5 +60,7 @@ class BuildPhar
 }
 
 //var_dump(BuildPhar::build('files', 'index.php', __DIR__ , 'app.phar'));
-var_dump(BuildPhar::compress('files', __DIR__ , 'pecl.phar'));
 //var_dump(BuildPhar::extract('app.phar', __DIR__ . DIRECTORY_SEPARATOR . 'extracted'));
+
+$result = BuildPhar::compress('files', __DIR__ , 'pecl.phar');
+if ($result == true) ConsoleOutput::success("File `pecl.phar` generated!")->print();
