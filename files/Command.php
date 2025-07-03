@@ -37,7 +37,11 @@ class Command
 
         if ($command == "download") {
             $this->extensionNameExistsInInput($command, $extension);
-            $this->download($extension, false);
+
+            ConsoleOutput::success($extension . ": Downloading DLL file...")->print()->break();
+            $result = $this->downloadFromGithub($extension, true);
+
+            if ($result == false) $this->download($extension, false);
             exit;
         }
 
@@ -73,14 +77,14 @@ class Command
             ConsoleOutput::success($extension_name . ": extension already installed and enabled")->print()->exit();
         }
 
-        if (file_exists($this->php_info["extensions_dir"] . "php_" . $extension_name . ".dll")) {
+        /* if (file_exists($this->php_info["extensions_dir"] . "php_" . $extension_name . ".dll")) {
             clearstatcache();
             $this->isExtensionLoaded($extension_name);
-        }
+        } */
 
         $this->download($extension_name);
         ConsoleOutput::success($extension_name . ": moving DLL to `ext` folder")->print()->break();
-        $is_moved = rename($this->extension_dir_temp, $this->extension_dir_file);
+        $is_moved = @rename($this->extension_dir_temp, $this->extension_dir_file);
 
         if ($is_moved == true && is_file($this->extension_dir_file)) {
             ConsoleOutput::success($extension_name . ": DLL moved to `ext` folder successfully")->print()->break();
@@ -95,8 +99,6 @@ class Command
 
     private function download(string $extension, bool $to_temp_dir = true)
     {
-        ConsoleOutput::success($extension . ": Downloading DLL file...")->print()->break();
-
         $url = $this->repo_raw_url . "master/extensions/" .  $extension . "/" . $this->php_info['php_version'] .
             "-" . $this->php_info['thread_safe'] . "-" . $extension . ".dll";
 
@@ -117,6 +119,64 @@ class Command
         } else {
             ConsoleOutput::success($extension . ": DLL file downloaded successfully")->print()->break();
         }
+    }
+
+    private function downloadFromGithub(string $extension_name, bool $to_temp_dir = true)
+    {
+        $packages = file_get_contents(dirname(__DIR__) . DIRECTORY_SEPARATOR . "packages.json");
+        $packages = json_decode($packages, true);
+
+        if (isset($packages[$extension_name])) {
+            $package_link = $packages[$extension_name];
+
+            $json = file_get_contents(
+                "https://api.github.com/repos/" . $package_link["repo"] . "/releases",
+                false
+            );
+
+            $result = json_decode($json);
+            $assets_files = $result[0]->assets;
+            $file = null;
+            $link_download = null;
+
+            foreach ($assets_files as $value) {
+                if (
+                    str_contains($value->name, $this->php_info["thread_safe"]) &&
+                    str_contains($value->name, $this->php_info["php_version"]) &&
+                    str_contains($value->name, $this->php_info["OSBits"])
+                ) {
+                    $link_download = $value->browser_download_url;
+                    $file = $value->name;
+                }
+            }
+
+            $result = file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . $file, fopen($link_download, "r"));
+
+            if (pathinfo(__DIR__ . DIRECTORY_SEPARATOR . $file, PATHINFO_EXTENSION) == "zip") {
+                $folder = basename($file, "zip");
+                $zip = new ZipArchive();
+
+                if ($zip->open(__DIR__ . DIRECTORY_SEPARATOR . $file) == true) {
+                    $zip->extractTo(__DIR__ . DIRECTORY_SEPARATOR . $folder);
+                    $zip->close();
+
+                    $result = copy(
+                        __DIR__ . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR . "php_" . $extension_name . ".dll",
+                        __DIR__ . DIRECTORY_SEPARATOR . "php_" . $extension_name . ".dll"
+                    );
+
+                    if ($result == true) {
+                        echo "Moved with successfully";
+                    } else {
+                        echo "Error to move";
+                    }
+                } else {
+                    echo "Error to extract files";
+                }
+            }
+        }
+
+        return false;
     }
 
     private function status(string $name): void
@@ -323,17 +383,18 @@ if ($is_moved == true && file_exists($user_dir . "pecl-updated.phar")) {
     private function PhpInfo(): array
     {
         if (ZEND_THREAD_SAFE == true) {
-            $this->php_info['thread_safe'] = 'ts';
+            $this->php_info["thread_safe"] = "ts";
         } else {
-            $this->php_info['thread_safe'] = 'nts';
+            $this->php_info["thread_safe"] = "nts";
         }
 
         $compiler = shell_exec("php -i | findstr Compiler");
         $compiler = explode("=>", trim($compiler));
 
-        $this->php_info['compiler'] = trim($compiler[1]);
-        $this->php_info['php_version'] = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
-        $this->php_info['extensions_dir'] = $this->PhpExtensionDir();
+        $this->php_info["compiler"] = trim($compiler[1]);
+        $this->php_info["php_version"] = PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;
+        $this->php_info["extensions_dir"] = $this->PhpExtensionDir();
+        $this->php_info["OSBits"] = empty(strstr(php_uname("m"), "64")) ? "86" : "64";
 
         return $this->php_info;
     }

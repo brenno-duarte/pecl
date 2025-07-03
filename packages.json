@@ -1,0 +1,12 @@
+{
+    "amqp": {
+        "link": "",
+        "php-version": ""
+    },
+    "apcu": {
+        "version": "5.1.23",
+        "repo": "krakjoe/apcu",
+        "source": "https://github.com/krakjoe/apcu",
+        "dll-exists": true
+    }
+}
